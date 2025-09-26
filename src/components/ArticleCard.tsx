@@ -1,5 +1,8 @@
+import Link from "next/link";
+
 interface Article {
   title: string;
+  slug: string;
   description?: string;
   publishedAt: string | number | Date;
   image: {
@@ -12,15 +15,17 @@ interface Article {
 }
 
 export default function ArticleCard({ article }: { article: Article }) {
+    const href = `/article/${article.slug}`;
+    const img = (article.image.fields.file.url || "").replace(/^\/\//, "https://");
     return (
-      <div className="flex gap-3">
+      <Link href={href} className="flex gap-3 group">
         <img
-          src={(article.image.fields.file.url || "").replace(/^\/\//, "https://")}
+          src={img}
           alt={article.title}
           className="w-24 h-16 object-cover rounded"
         />
         <div>
-          <h3 className="font-semibold text-sm">{article.title}</h3>
+          <h3 className="font-semibold text-sm group-hover:underline">{article.title}</h3>
           {article.description ? (
             <p className="text-xs text-gray-600 mt-1 line-clamp-2">
               {article.description}
@@ -30,7 +35,7 @@ export default function ArticleCard({ article }: { article: Article }) {
             {new Date(article.publishedAt).toLocaleString()}
           </p>
         </div>
-      </div>
+      </Link>
     );
   }
   
