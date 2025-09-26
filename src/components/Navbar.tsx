@@ -26,6 +26,9 @@ export default function Navbar() {
                 <li>
                   <Link href="/technology" className="hover:underline">Technology</Link>
                 </li>
+                <li>
+                  <Link href="/videos" className="hover:underline">Videos</Link>
+                </li>
               </ul>
             </nav>
           </div>
