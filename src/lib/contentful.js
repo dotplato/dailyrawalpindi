@@ -34,3 +34,14 @@ export async function fetchLatestArticles(limit = 20) {
   });
   return res.items;
 }
+
+export async function fetchArticleBySlug(slug) {
+  const res = await client.getEntries({
+    content_type: "article",
+    "fields.slug": slug,
+    limit: 1,
+    // Make sure all fields are included, including rich text
+    include: 2
+  });
+  return res.items[0] || null;
+}
