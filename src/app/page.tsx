@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { fetchLatestArticles, fetchArticlesByCategory } from "@/lib/contentful";
+import {
+  fetchLatestArticles,
+  fetchArticlesByCategory,
+} from "@/lib/contentful";
+import { documentToPlainTextString } from "@contentful/rich-text-plain-text-renderer";
 
 type Article = {
   id: string;
@@ -9,6 +13,16 @@ type Article = {
   image: string;
   href?: string;
 };
+
+function TitleOnlyItem({ a }: { a: Article }) {
+  return (
+    <li className="py-2">
+      <Link href={a.href || "#"} className="block hover:text-blue-600">
+        <h3 className="font-medium text-sm leading-snug">{a.title}</h3>
+      </Link>
+    </li>
+  );
+}
 
 function ListItem({ a }: { a: Article }) {
   return (
@@ -36,7 +50,9 @@ function ListItem({ a }: { a: Article }) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-bold text-lg border-l-4 pl-2 border-black">{children}</h2>
+    <h2 className="font-bold text-lg border-l-4 pl-2 border-black">
+      {children}
+    </h2>
   );
 }
 
@@ -51,10 +67,17 @@ export default async function Home() {
         ? `https:${rawUrl}`
         : rawUrl
       : "https://placehold.co/400x300/png";
+
+    const desc = e.fields.description
+      ? typeof e.fields.description === "string"
+        ? e.fields.description
+        : documentToPlainTextString(e.fields.description)
+      : "";
+
     return {
       id: e.sys.id,
       title: e.fields.title,
-      description: e.fields.description,
+      description: desc,
       image: normalizedUrl,
       href: e.fields.slug ? `/article/${e.fields.slug}` : undefined,
     };
@@ -81,10 +104,26 @@ export default async function Home() {
   const headlines: Article[] = latestMapped.slice(12, 18);
 
   const bottomCats: { title: string; href: string; items: Article[] }[] = [
-    { title: "Politics", href: "/politics", items: pol.map(mapEntry).slice(0, 4) },
-    { title: "Sports", href: "/sports", items: spo.map(mapEntry).slice(0, 4) },
-    { title: "Entertainment", href: "/entertainment", items: ent.map(mapEntry).slice(0, 4) },
-    { title: "Technology", href: "/technology", items: tech.map(mapEntry).slice(0, 4) },
+    {
+      title: "Politics",
+      href: "/politics",
+      items: pol.map(mapEntry).slice(0, 4),
+    },
+    {
+      title: "Sports",
+      href: "/sports",
+      items: spo.map(mapEntry).slice(0, 4),
+    },
+    {
+      title: "Entertainment",
+      href: "/entertainment",
+      items: ent.map(mapEntry).slice(0, 4),
+    },
+    {
+      title: "Technology",
+      href: "/technology",
+      items: tech.map(mapEntry).slice(0, 4),
+    },
   ];
 
   return (
@@ -107,8 +146,12 @@ export default async function Home() {
                 height={450}
                 className="w-full h-auto rounded"
               />
-              <h1 className="mt-3 text-xl font-bold leading-snug">{lead.title}</h1>
-              <p className="text-sm text-black/70 mt-1">{lead.description}</p>
+              <h1 className="mt-3 text-xl font-bold leading-snug">
+                {lead.title}
+              </h1>
+              <p className="text-sm text-black/70 mt-1 line-clamp-2">
+                {lead.description}
+              </p>
             </Link>
           )}
 
@@ -198,7 +241,10 @@ export default async function Home() {
           <SectionTitle>Videos</SectionTitle>
           <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
             {videoMain && (
-              <Link href={videoMain.href || "#"} className="md:col-span-2 block">
+              <Link
+                href={videoMain.href || "#"}
+                className="md:col-span-2 block"
+              >
                 <Image
                   src={videoMain.image}
                   alt={videoMain.title}
@@ -236,11 +282,31 @@ export default async function Home() {
               <Link href={cat.href} className="block">
                 <SectionTitle>{cat.title}</SectionTitle>
               </Link>
-              <ul className="divide-y divide-black/[.08]">
-                {cat.items.map((a) => (
-                  <ListItem key={a.id} a={a} />
-                ))}
-              </ul>
+              
+              {/* First article with image */}
+              {cat.items[0] && (
+                <Link href={cat.items[0].href || "#"} className="block">
+                  <Image
+                    src={cat.items[0].image}
+                    alt={cat.items[0].title}
+                    width={400}
+                    height={250}
+                    className="w-full h-48 object-cover rounded"
+                  />
+                  <h3 className="mt-2 font-semibold text-sm leading-snug">
+                    {cat.items[0].title}
+                  </h3>
+                </Link>
+              )}
+              
+              {/* Remaining articles with titles only */}
+              {cat.items.length > 1 && (
+                <ul className="divide-y divide-gray-800">
+                  {cat.items.slice(1).map((a) => (
+                    <TitleOnlyItem key={a.id} a={a} />
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
         </div>
