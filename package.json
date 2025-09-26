@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@contentful/rich-text-plain-text-renderer": "^17.1.5",
     "@contentful/rich-text-react-renderer": "^16.1.5",
     "@contentful/rich-text-types": "^17.2.4",
     "contentful": "^11.7.19",
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
