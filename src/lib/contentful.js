@@ -45,3 +45,11 @@ export async function fetchArticleBySlug(slug) {
   });
   return res.items[0] || null;
 }
+
+export async function fetchAds(limit = 10) {
+  const res = await client.getEntries({
+    content_type: "ad",
+    limit,
+  });
+  return res.items;
+}
