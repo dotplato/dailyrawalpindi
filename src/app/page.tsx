@@ -5,6 +5,7 @@ import {
   fetchArticlesByCategory,
   fetchAds,
 } from "@/lib/contentful";
+import MustReadCarousel from "@/components/MustReadCarousel";
 import { documentToPlainTextString } from "@contentful/rich-text-plain-text-renderer";
 
 type Article = {
@@ -27,13 +28,12 @@ type Ad = {
 
 function TitleOnlyItem({ a }: { a: Article }) {
   return (
-    <li className="py-2">
-      <Link href={a.href || "#"} className="block hover:text-blue-600">
-        <h3 className="font-medium text-sm leading-snug">{a.title}</h3>
-      </Link>
-    </li>
+    <Link href={a.href || "#"} className="block hover:text-blue-600">
+      <h3 className="font-medium text-sm leading-snug">{a.title}</h3>
+    </Link>
   );
 }
+
 
 function ListItem({ a }: { a: Article }) {
   return (
@@ -73,9 +73,7 @@ function EditorsPickItem({ a }: { a: Article }) {
             {a.title}
           </h3>
         </Link>
-        {a.author && (
-          <p className="text-xs text-blue-700 mt-1">{a.author}</p>
-        )}
+        {a.author && <p className="text-xs text-blue-700 mt-1">{a.author}</p>}
       </div>
       {a.image && (
         <Image
@@ -166,11 +164,8 @@ export default async function Home() {
   const topStories: Article[] = latestMapped.slice(5, 9);
 
   // ✅ Now Editor’s Picks uses flag
-  const editorsPicks: Article[] = latestMapped
-    .filter((a) => a.editorPick)
-    .slice(0, 8);
+  const editorsPicks: Article[] = latestMapped.filter((a) => a.editorPick).slice(0, 8);
 
-  const mustRead: Article | undefined = latestMapped[5];
   const shows: Article | undefined = latestMapped[6];
   const videoMain: Article | undefined = latestMapped[7];
   const videoList: Article[] = latestMapped.slice(8, 12);
@@ -182,6 +177,17 @@ export default async function Home() {
     { title: "Entertainment", href: "/entertainment", items: entMapped.slice(0, 4) },
     { title: "Technology", href: "/technology", items: techMapped.slice(0, 4) },
   ];
+
+  // Build must-read slides: pick first/latest entry from each category mapping
+  const mustReadCandidates = [polMapped[0], spoMapped[0], entMapped[0], techMapped[0]];
+  const mustReadArticles = mustReadCandidates
+    .filter(Boolean)
+    .map((a) => ({
+      id: a!.id,
+      title: a!.title,
+      href: a!.href || "#",
+      image: a!.image,
+    }));
 
   return (
     <div className="space-y-8">
@@ -205,10 +211,7 @@ export default async function Home() {
         {/* Left lead and list */}
         <section className="space-y-4">
           {lead && (
-            <Link
-              href={lead.href || "#"}
-              className="block pb-4 border-b border-gray-400"
-            >
+            <Link href={lead.href || "#"} className="block pb-4 border-b border-gray-400">
               <Image
                 src={lead.image}
                 alt={lead.title}
@@ -216,12 +219,8 @@ export default async function Home() {
                 height={450}
                 className="w-full h-auto rounded"
               />
-              <h1 className="mt-3 text-xl font-bold leading-snug">
-                {lead.title}
-              </h1>
-              <p className="text-sm text-black/70 mt-1 line-clamp-2">
-                {lead.description}
-              </p>
+              <h1 className="mt-3 text-xl font-bold leading-snug">{lead.title}</h1>
+              <p className="text-sm text-black/70 mt-1 line-clamp-2">{lead.description}</p>
             </Link>
           )}
 
@@ -239,21 +238,9 @@ export default async function Home() {
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {topStories.map((a) => (
               <Link key={a.id} href={a.href || "#"} className="block">
-                <Image
-                  src={a.image}
-                  alt={a.title}
-                  width={480}
-                  height={320}
-                  className="w-full h-auto rounded"
-                />
-                <h3 className="mt-2 font-semibold text-sm leading-snug ">
-                  {a.title}
-                </h3>
-                {a.description && (
-                  <p className="text-sm text-black/70 mt-1 line-clamp-2">
-                    {a.description}
-                  </p>
-                )}
+                <Image src={a.image} alt={a.title} width={480} height={320} className="w-full h-auto rounded" />
+                <h3 className="mt-2 font-semibold text-sm leading-snug ">{a.title}</h3>
+                {a.description && <p className="text-sm text-black/70 mt-1 line-clamp-2">{a.description}</p>}
               </Link>
             ))}
           </div>
@@ -264,12 +251,7 @@ export default async function Home() {
           {adSide && (
             <div className="w-full flex justify-center">
               <Link href={adSide.link}>
-                <Image
-                  src={adSide.image}
-                  alt="Sidebar Ad"
-                  width={300}
-                  height={250}
-                />
+                <Image src={adSide.image} alt="Sidebar Ad" width={300} height={250} />
               </Link>
             </div>
           )}
@@ -285,37 +267,7 @@ export default async function Home() {
       </div>
 
       {/* Must Read */}
-      <section className="space-y-3">
-        <SectionTitle>Must Read</SectionTitle>
-        {mustRead && (
-          <Link href={mustRead.href || "#"} className="block">
-            <Image
-              src={mustRead.image}
-              alt={mustRead.title}
-              width={1000}
-              height={400}
-              className="w-full h-auto rounded"
-            />
-            <h3 className="mt-2 font-semibold">{mustRead.title}</h3>
-          </Link>
-        )}
-      </section>
-
-      {/* Shows */}
-      <section className="space-y-3">
-        <SectionTitle>Shows</SectionTitle>
-        {shows && (
-          <Link href={shows.href || "#"} className="block">
-            <Image
-              src={shows.image}
-              alt={shows.title}
-              width={1000}
-              height={360}
-              className="w-full h-auto rounded"
-            />
-          </Link>
-        )}
-      </section>
+      <MustReadCarousel articles={mustReadArticles} />
 
       {/* Videos + Headlines */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -323,20 +275,9 @@ export default async function Home() {
           <SectionTitle>Videos</SectionTitle>
           <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
             {videoMain && (
-              <Link
-                href={videoMain.href || "#"}
-                className="md:col-span-2 block"
-              >
-                <Image
-                  src={videoMain.image}
-                  alt={videoMain.title}
-                  width={900}
-                  height={500}
-                  className="w-full h-auto rounded"
-                />
-                <h3 className="mt-2 font-semibold text-lg leading-snug">
-                  {videoMain.title}
-                </h3>
+              <Link href={videoMain.href || "#"} className="md:col-span-2 block">
+                <Image src={videoMain.image} alt={videoMain.title} width={900} height={500} className="w-full h-auto rounded" />
+                <h3 className="mt-2 font-semibold text-lg leading-snug">{videoMain.title}</h3>
               </Link>
             )}
             <ul className="divide-y divide-black/[.08]">
@@ -356,43 +297,44 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Bottom categories */}
-      <section className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          {bottomCats.map((cat) => (
-            <div key={cat.title} className="space-y-3">
-              <Link href={cat.href} className="block">
-                <SectionTitle>{cat.title}</SectionTitle>
+     {/* Bottom categories */}
+<section className="space-y-6">
+  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+    {bottomCats.map((cat) => (
+      <div key={cat.title} className="flex flex-col h-full space-y-3 rounded-lg p-3">
+        <Link href={cat.href} className="block">
+          <SectionTitle>{cat.title}</SectionTitle>
+        </Link>
+
+        <ul className="divide-y divide-gray-400 flex-1">
+          {/* First article with image */}
+          {cat.items[0] && (
+            <li className="pb-3">
+              <Link href={cat.items[0].href || "#"} className="block">
+                <Image
+                  src={cat.items[0].image}
+                  alt={cat.items[0].title}
+                  width={400}
+                  height={250}
+                  className="w-full h-48 object-cover rounded"
+                />
+                <h3 className="mt-2 font-semibold text-sm leading-snug">{cat.items[0].title}</h3>
               </Link>
+            </li>
+          )}
 
-              {/* First article with image */}
-              {cat.items[0] && (
-                <Link href={cat.items[0].href || "#"} className="block">
-                  <Image
-                    src={cat.items[0].image}
-                    alt={cat.items[0].title}
-                    width={400}
-                    height={250}
-                    className="w-full h-48 object-cover rounded"
-                  />
-                  <h3 className="mt-2 font-semibold text-sm leading-snug">
-                    {cat.items[0].title}
-                  </h3>
-                </Link>
-              )}
-
-              {/* Remaining articles with titles only */}
-              {cat.items.length > 1 && (
-                <ul className="divide-y divide-gray-800">
-                  {cat.items.slice(1).map((a) => (
-                    <TitleOnlyItem key={a.id} a={a} />
-                  ))}
-                </ul>
-              )}
-            </div>
+          {/* Remaining articles */}
+          {cat.items.slice(1).map((a) => (
+            <li key={a.id} className="py-2">
+              <TitleOnlyItem a={a} />
+            </li>
           ))}
-        </div>
-      </section>
+        </ul>
+      </div>
+    ))}
+  </div>
+</section>
+
     </div>
   );
 }
