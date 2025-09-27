@@ -3,15 +3,26 @@ import Link from "next/link";
 import {
   fetchLatestArticles,
   fetchArticlesByCategory,
+  fetchAds,
 } from "@/lib/contentful";
 import { documentToPlainTextString } from "@contentful/rich-text-plain-text-renderer";
 
 type Article = {
   id: string;
   title: string;
+  subtitle?: string;
   description?: string;
   image: string;
   href?: string;
+  author?: string;
+  editorPick?: boolean; // ✅ keep flag
+};
+
+type Ad = {
+  id: string;
+  placement: string;
+  image: string;
+  link: string;
 };
 
 function TitleOnlyItem({ a }: { a: Article }) {
@@ -26,24 +37,55 @@ function TitleOnlyItem({ a }: { a: Article }) {
 
 function ListItem({ a }: { a: Article }) {
   return (
-    <li className="py-3">
-      <Link href={a.href || "#"} className="flex gap-3 items-start">
-        <Image
-          src={a.image || "https://placehold.co/120x80/png"}
-          alt={a.title}
-          width={120}
-          height={80}
-          className="rounded object-cover w-[120px] h-[80px] flex-shrink-0"
-        />
-        <div>
-          <h3 className="font-semibold leading-snug">{a.title}</h3>
-          {a.description ? (
-            <p className="text-sm text-black/70 mt-1 line-clamp-3">
-              {a.description}
-            </p>
-          ) : null}
+    <li className="py-4 border-b border-gray-400">
+      <Link href={a.href || "#"} className="block">
+        <h2 className="text-base font-semibold leading-snug mb-2">{a.title}</h2>
+        <div className="grid grid-cols-[120px_1fr] gap-3 items-start">
+          {a.image && (
+            <Image
+              src={a.image}
+              alt={a.title}
+              width={120}
+              height={80}
+              className="rounded w-[120px] h-[80px] object-cover"
+            />
+          )}
+          <div className="flex flex-col justify-start">
+            {a.subtitle && (
+              <p className="text-sm text-gray-700 leading-snug line-clamp-3">
+                {a.subtitle}
+              </p>
+            )}
+          </div>
         </div>
       </Link>
+    </li>
+  );
+}
+
+// ✅ Editor's Picks item layout
+function EditorsPickItem({ a }: { a: Article }) {
+  return (
+    <li className="flex justify-between items-start py-3 border-b border-gray-200">
+      <div className="flex-1 pr-3">
+        <Link href={a.href || "#"} className="block">
+          <h3 className="font-semibold text-sm leading-snug hover:text-blue-600">
+            {a.title}
+          </h3>
+        </Link>
+        {a.author && (
+          <p className="text-xs text-blue-700 mt-1">{a.author}</p>
+        )}
+      </div>
+      {a.image && (
+        <Image
+          src={a.image}
+          alt={a.title}
+          width={48}
+          height={48}
+          className="w-12 h-12 object-cover rounded"
+        />
+      )}
     </li>
   );
 }
@@ -57,8 +99,33 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default async function Home() {
-  const adTop = "https://placehold.co/970x90/png?text=Top+Ad+Banner";
-  const adSide = "https://placehold.co/300x250/png?text=Ad";
+  const [latest, pol, spo, ent, tech, ads] = await Promise.all([
+    fetchLatestArticles(20),
+    fetchArticlesByCategory("politics", 6),
+    fetchArticlesByCategory("sports", 6),
+    fetchArticlesByCategory("entertainment", 6),
+    fetchArticlesByCategory("technology", 6),
+    fetchAds(5),
+  ]);
+
+  const adsMapped: Ad[] = ads.map((ad: any) => {
+    const rawUrl = ad.fields.image?.fields?.file?.url;
+    const normalizedUrl = rawUrl
+      ? rawUrl.startsWith("//")
+        ? `https:${rawUrl}`
+        : rawUrl
+      : "https://placehold.co/400x300/png";
+
+    return {
+      id: ad.sys.id,
+      placement: ad.fields.placement,
+      image: normalizedUrl,
+      link: ad.fields.link || "#",
+    };
+  });
+
+  const adTop = adsMapped.find((ad) => ad.placement === "top");
+  const adSide = adsMapped.find((ad) => ad.placement === "sidebar");
 
   const mapEntry = (e: any): Article => {
     const rawUrl = e.fields.image?.fields?.file?.url;
@@ -77,25 +144,31 @@ export default async function Home() {
     return {
       id: e.sys.id,
       title: e.fields.title,
+      subtitle: e.fields.subtitle || "",
       description: desc,
       image: normalizedUrl,
       href: e.fields.slug ? `/article/${e.fields.slug}` : undefined,
+      author: e.fields.author || "", // optional if you have author field
+      editorPick: e.fields.editorPick || false, // ✅ map boolean flag
     };
   };
 
-  const [latest, pol, spo, ent, tech] = await Promise.all([
-    fetchLatestArticles(20),
-    fetchArticlesByCategory("politics", 6),
-    fetchArticlesByCategory("sports", 6),
-    fetchArticlesByCategory("entertainment", 6),
-    fetchArticlesByCategory("technology", 6),
-  ]);
+  const [latestMapped, polMapped, spoMapped, entMapped, techMapped] = [
+    latest.map(mapEntry),
+    pol.map(mapEntry),
+    spo.map(mapEntry),
+    ent.map(mapEntry),
+    tech.map(mapEntry),
+  ];
 
-  const latestMapped = latest.map(mapEntry);
   const lead: Article | undefined = latestMapped[0];
   const leftList: Article[] = latestMapped.slice(1, 5);
   const topStories: Article[] = latestMapped.slice(5, 9);
-  const editorsPicks: Article[] = latestMapped.slice(9, 15);
+
+  // ✅ Now Editor’s Picks uses flag
+  const editorsPicks: Article[] = latestMapped
+    .filter((a) => a.editorPick)
+    .slice(0, 8);
 
   const mustRead: Article | undefined = latestMapped[5];
   const shows: Article | undefined = latestMapped[6];
@@ -104,41 +177,38 @@ export default async function Home() {
   const headlines: Article[] = latestMapped.slice(12, 18);
 
   const bottomCats: { title: string; href: string; items: Article[] }[] = [
-    {
-      title: "Politics",
-      href: "/politics",
-      items: pol.map(mapEntry).slice(0, 4),
-    },
-    {
-      title: "Sports",
-      href: "/sports",
-      items: spo.map(mapEntry).slice(0, 4),
-    },
-    {
-      title: "Entertainment",
-      href: "/entertainment",
-      items: ent.map(mapEntry).slice(0, 4),
-    },
-    {
-      title: "Technology",
-      href: "/technology",
-      items: tech.map(mapEntry).slice(0, 4),
-    },
+    { title: "Politics", href: "/politics", items: polMapped.slice(0, 4) },
+    { title: "Sports", href: "/sports", items: spoMapped.slice(0, 4) },
+    { title: "Entertainment", href: "/entertainment", items: entMapped.slice(0, 4) },
+    { title: "Technology", href: "/technology", items: techMapped.slice(0, 4) },
   ];
 
   return (
     <div className="space-y-8">
       {/* Top banner */}
-      <div className="w-full flex justify-center">
-        <Image src={adTop} alt="Ad banner" width={970} height={90} />
-      </div>
+      {adTop && (
+        <div className="w-full mb-20">
+          <Link href={adTop.link}>
+            <Image
+              src={adTop.image}
+              alt="Top Ad"
+              width={2070}
+              height={100}
+              className="w-full h-[200px] object-fill"
+            />
+          </Link>
+        </div>
+      )}
 
       {/* Three-column hero area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left lead and list */}
         <section className="space-y-4">
           {lead && (
-            <Link href={lead.href || "#"} className="block">
+            <Link
+              href={lead.href || "#"}
+              className="block pb-4 border-b border-gray-400"
+            >
               <Image
                 src={lead.image}
                 alt={lead.title}
@@ -155,7 +225,8 @@ export default async function Home() {
             </Link>
           )}
 
-          <ul className="divide-y divide-black/[.08]">
+          {/* Rest of the articles */}
+          <ul>
             {leftList.map((a) => (
               <ListItem key={a.id} a={a} />
             ))}
@@ -175,7 +246,9 @@ export default async function Home() {
                   height={320}
                   className="w-full h-auto rounded"
                 />
-                <h3 className="mt-2 font-semibold leading-snug">{a.title}</h3>
+                <h3 className="mt-2 font-semibold text-sm leading-snug ">
+                  {a.title}
+                </h3>
                 {a.description && (
                   <p className="text-sm text-black/70 mt-1 line-clamp-2">
                     {a.description}
@@ -188,14 +261,23 @@ export default async function Home() {
 
         {/* Right sidebar */}
         <aside className="space-y-4">
-          <div className="w-full flex justify-center">
-            <Image src={adSide} alt="Sidebar ad" width={300} height={250} />
-          </div>
+          {adSide && (
+            <div className="w-full flex justify-center">
+              <Link href={adSide.link}>
+                <Image
+                  src={adSide.image}
+                  alt="Sidebar Ad"
+                  width={300}
+                  height={250}
+                />
+              </Link>
+            </div>
+          )}
           <div>
             <SectionTitle>Editor's Picks</SectionTitle>
-            <ul className="mt-3 divide-y divide-black/[.08]">
+            <ul className="mt-3">
               {editorsPicks.map((a) => (
-                <ListItem key={a.id} a={a} />
+                <EditorsPickItem key={a.id} a={a} />
               ))}
             </ul>
           </div>
@@ -282,7 +364,7 @@ export default async function Home() {
               <Link href={cat.href} className="block">
                 <SectionTitle>{cat.title}</SectionTitle>
               </Link>
-              
+
               {/* First article with image */}
               {cat.items[0] && (
                 <Link href={cat.items[0].href || "#"} className="block">
@@ -298,7 +380,7 @@ export default async function Home() {
                   </h3>
                 </Link>
               )}
-              
+
               {/* Remaining articles with titles only */}
               {cat.items.length > 1 && (
                 <ul className="divide-y divide-gray-800">
