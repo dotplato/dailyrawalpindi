@@ -4,6 +4,7 @@ import {
   fetchLatestArticles,
   fetchArticlesByCategory,
   fetchAds,
+  fetchCategories, // ✅ now fetching categories dynamically
 } from "@/lib/contentful";
 import MustReadCarousel from "@/components/MustReadCarousel";
 import { documentToPlainTextString } from "@contentful/rich-text-plain-text-renderer";
@@ -16,7 +17,7 @@ type Article = {
   image: string;
   href?: string;
   author?: string;
-  editorPick?: boolean; // ✅ keep flag
+  editorPick?: boolean;
 };
 
 type Ad = {
@@ -33,7 +34,6 @@ function TitleOnlyItem({ a }: { a: Article }) {
     </Link>
   );
 }
-
 
 function ListItem({ a }: { a: Article }) {
   return (
@@ -63,7 +63,6 @@ function ListItem({ a }: { a: Article }) {
   );
 }
 
-// ✅ Editor's Picks item layout
 function EditorsPickItem({ a }: { a: Article }) {
   return (
     <li className="flex justify-between items-start py-3 border-b border-gray-200">
@@ -97,15 +96,13 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default async function Home() {
-  const [latest, pol, spo, ent, tech, ads] = await Promise.all([
+  const [latest, categories, ads] = await Promise.all([
     fetchLatestArticles(20),
-    fetchArticlesByCategory("politics", 6),
-    fetchArticlesByCategory("sports", 6),
-    fetchArticlesByCategory("entertainment", 6),
-    fetchArticlesByCategory("technology", 6),
+    fetchCategories(), // ✅ all categories dynamically
     fetchAds(5),
   ]);
 
+  // ✅ Normalize ads
   const adsMapped: Ad[] = ads.map((ad: any) => {
     const rawUrl = ad.fields.image?.fields?.file?.url;
     const normalizedUrl = rawUrl
@@ -125,6 +122,7 @@ export default async function Home() {
   const adTop = adsMapped.find((ad) => ad.placement === "top");
   const adSide = adsMapped.find((ad) => ad.placement === "sidebar");
 
+  // ✅ Article mapper
   const mapEntry = (e: any): Article => {
     const rawUrl = e.fields.image?.fields?.file?.url;
     const normalizedUrl = rawUrl
@@ -146,41 +144,36 @@ export default async function Home() {
       description: desc,
       image: normalizedUrl,
       href: e.fields.slug ? `/article/${e.fields.slug}` : undefined,
-      author: e.fields.author || "", // optional if you have author field
-      editorPick: e.fields.editorPick || false, // ✅ map boolean flag
+      author: e.fields.author || "",
+      editorPick: e.fields.editorPick || false,
     };
   };
 
-  const [latestMapped, polMapped, spoMapped, entMapped, techMapped] = [
-    latest.map(mapEntry),
-    pol.map(mapEntry),
-    spo.map(mapEntry),
-    ent.map(mapEntry),
-    tech.map(mapEntry),
-  ];
+  const latestMapped = latest.map(mapEntry);
 
   const lead: Article | undefined = latestMapped[0];
   const leftList: Article[] = latestMapped.slice(1, 5);
   const topStories: Article[] = latestMapped.slice(5, 9);
-
-  // ✅ Now Editor’s Picks uses flag
   const editorsPicks: Article[] = latestMapped.filter((a) => a.editorPick).slice(0, 8);
-
-  const shows: Article | undefined = latestMapped[6];
   const videoMain: Article | undefined = latestMapped[7];
   const videoList: Article[] = latestMapped.slice(8, 12);
   const headlines: Article[] = latestMapped.slice(12, 18);
 
-  const bottomCats: { title: string; href: string; items: Article[] }[] = [
-    { title: "Politics", href: "/politics", items: polMapped.slice(0, 4) },
-    { title: "Sports", href: "/sports", items: spoMapped.slice(0, 4) },
-    { title: "Entertainment", href: "/entertainment", items: entMapped.slice(0, 4) },
-    { title: "Technology", href: "/technology", items: techMapped.slice(0, 4) },
-  ];
+  // ✅ Build dynamic bottom categories
+  const bottomCats = await Promise.all(
+    categories.map(async (cat) => {
+      const articles = await fetchArticlesByCategory(cat.slug, 5);
+      return {
+        title: cat.title,
+        href: `/${cat.slug}`,
+        items: articles.map(mapEntry),
+      };
+    })
+  );
 
-  // Build must-read slides: pick first/latest entry from each category mapping
-  const mustReadCandidates = [polMapped[0], spoMapped[0], entMapped[0], techMapped[0]];
-  const mustReadArticles = mustReadCandidates
+  // ✅ Must Read slides
+  const mustReadArticles = bottomCats
+    .map((cat) => cat.items[0])
     .filter(Boolean)
     .map((a) => ({
       id: a!.id,
@@ -206,9 +199,8 @@ export default async function Home() {
         </div>
       )}
 
-      {/* Three-column hero area */}
+      {/* Hero section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left lead and list */}
         <section className="space-y-4">
           {lead && (
             <Link href={lead.href || "#"} className="block pb-4 border-b border-gray-400">
@@ -223,8 +215,6 @@ export default async function Home() {
               <p className="text-sm text-black/70 mt-1 line-clamp-2">{lead.description}</p>
             </Link>
           )}
-
-          {/* Rest of the articles */}
           <ul>
             {leftList.map((a) => (
               <ListItem key={a.id} a={a} />
@@ -232,7 +222,6 @@ export default async function Home() {
           </ul>
         </section>
 
-        {/* Middle: Top Stories grid */}
         <section>
           <SectionTitle>Top Stories</SectionTitle>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -246,7 +235,6 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Right sidebar */}
         <aside className="space-y-4">
           {adSide && (
             <div className="w-full flex justify-center">
@@ -297,44 +285,39 @@ export default async function Home() {
         </div>
       </section>
 
-     {/* Bottom categories */}
-<section className="space-y-6">
-  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-    {bottomCats.map((cat) => (
-      <div key={cat.title} className="flex flex-col h-full space-y-3 rounded-lg p-3">
-        <Link href={cat.href} className="block">
-          <SectionTitle>{cat.title}</SectionTitle>
-        </Link>
-
-        <ul className="divide-y divide-gray-400 flex-1">
-          {/* First article with image */}
-          {cat.items[0] && (
-            <li className="pb-3">
-              <Link href={cat.items[0].href || "#"} className="block">
-                <Image
-                  src={cat.items[0].image}
-                  alt={cat.items[0].title}
-                  width={400}
-                  height={250}
-                  className="w-full h-48 object-cover rounded"
-                />
-                <h3 className="mt-2 font-semibold text-sm leading-snug">{cat.items[0].title}</h3>
+      {/* ✅ Dynamic Bottom Categories */}
+      <section className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          {bottomCats.map((cat) => (
+            <div key={cat.title} className="flex flex-col h-full space-y-3 rounded-lg p-3">
+              <Link href={cat.href} className="block">
+                <SectionTitle>{cat.title}</SectionTitle>
               </Link>
-            </li>
-          )}
-
-          {/* Remaining articles */}
-          {cat.items.slice(1).map((a) => (
-            <li key={a.id} className="py-2">
-              <TitleOnlyItem a={a} />
-            </li>
+              <ul className="divide-y divide-gray-400 flex-1">
+                {cat.items[0] && (
+                  <li className="pb-3">
+                    <Link href={cat.items[0].href || "#"} className="block">
+                      <Image
+                        src={cat.items[0].image}
+                        alt={cat.items[0].title}
+                        width={400}
+                        height={250}
+                        className="w-full h-48 object-cover rounded"
+                      />
+                      <h3 className="mt-2 font-semibold text-sm leading-snug">{cat.items[0].title}</h3>
+                    </Link>
+                  </li>
+                )}
+                {cat.items.slice(1).map((a) => (
+                  <li key={a.id} className="py-2">
+                    <TitleOnlyItem a={a} />
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
-      </div>
-    ))}
-  </div>
-</section>
-
+        </div>
+      </section>
     </div>
   );
 }

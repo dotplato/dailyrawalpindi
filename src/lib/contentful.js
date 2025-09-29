@@ -5,26 +5,48 @@ export const client = createClient({
   accessToken: process.env.CONTENTFUL_ACCESS_TOKEN,
 });
 
-// If your categories in Contentful are lowercase (politics, sports etc.),
-// keep them lowercase here.
-const CATEGORY_MAP = {
-  politics: "politics",
-  sports: "sports",
-  entertainment: "entertainment",
-  technology: "technology",
-};
-
-export async function fetchArticlesByCategory(category, limit = 100) {
-  const key = category.toLowerCase();
-  const value = CATEGORY_MAP[key] || category;
+// ✅ Fetch all unique categories from articles
+export async function fetchCategories() {
   const res = await client.getEntries({
     content_type: "article",
-    "fields.category": value,
+    select: "fields.category",
+    limit: 1000,
+  });
+
+  // Extract unique category values
+  const categories = [
+    ...new Set(res.items.map((item) => item.fields.category)),
+  ];
+
+  // Capitalize helper
+  function capitalize(word) {
+    if (!word) return "";
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }
+
+  // Map into objects usable for navbar
+  return categories.map((cat) => ({
+    id: cat, // use category name as ID
+    title: capitalize(cat), // ✅ capitalized for display
+    slug: cat.toLowerCase(), // ✅ lowercase for URL
+  }));
+}
+
+
+
+
+
+export async function fetchArticlesByCategory(categorySlug, limit = 100) {
+  const res = await client.getEntries({
+    content_type: "article",
+    "fields.category": categorySlug, // ✅ just match the string value
     order: "-fields.publishedAt",
     limit,
   });
+
   return res.items;
 }
+
 
 export async function fetchLatestArticles(limit = 20) {
   const res = await client.getEntries({
@@ -40,8 +62,7 @@ export async function fetchArticleBySlug(slug) {
     content_type: "article",
     "fields.slug": slug,
     limit: 1,
-    // Make sure all fields are included, including rich text
-    include: 2
+    include: 2, // includes linked references like category + rich text
   });
   return res.items[0] || null;
 }

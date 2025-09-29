@@ -10,9 +10,9 @@ interface Article {
     title: string;
     slug: string;
     description1: string;
-    image: { fields: { file: { url: string } } };
+    image?: { fields?: { file?: { url?: string } } };
     publishedAt: string;
-    featured?: boolean; // ✅ add featured flag
+    featured?: boolean;
   };
 }
 
@@ -73,15 +73,14 @@ export default async function CategoryPage({
             description1: desc,
             image: entry.fields.image,
             publishedAt: entry.fields.publishedAt,
-            featured: entry.fields.featured || false, // ✅ keep featured flag
+            featured: entry.fields.featured || false,
           },
         };
       })
     : [];
 
   // ✅ Featured logic (fallback to latest 5 if none)
-  const featuredArticles =
-    articles.filter((a) => a.fields.featured) || [];
+  const featuredArticles = articles.filter((a) => a.fields.featured) || [];
   const featuredForDisplay =
     featuredArticles.length > 0 ? featuredArticles : articles.slice(0, 5);
 
@@ -95,6 +94,13 @@ export default async function CategoryPage({
       </div>
     );
   }
+
+  const firstArticle = articles[0];
+  const firstImage =
+    firstArticle.fields.image?.fields?.file?.url || "https://placehold.co/400x300/png";
+  const normalizedFirstImage = firstImage.startsWith("//")
+    ? `https:${firstImage}`
+    : firstImage;
 
   return (
     <div className="max-w-7xl mx-auto px-4">
@@ -121,31 +127,23 @@ export default async function CategoryPage({
 
         {/* Right side */}
         <div className="lg:col-span-2">
-          {articles[0] && (
+          {firstArticle && (
             <Link
-              href={`/article/${articles[0].fields.slug}`}
+              href={`/article/${firstArticle.fields.slug}`}
               className="flex gap-4 mb-6"
             >
               <img
-                src={
-                  (articles[0].fields.image.fields.file.url || "").startsWith(
-                    "//"
-                  )
-                    ? `https:${articles[0].fields.image.fields.file.url}`
-                    : articles[0].fields.image.fields.file.url
-                }
-                alt={articles[0].fields.title}
+                src={normalizedFirstImage}
+                alt={firstArticle.fields.title}
                 className="w-48 h-32 object-cover rounded"
               />
               <div>
-                <h2 className="font-bold text-xl">
-                  {articles[0].fields.title}
-                </h2>
+                <h2 className="font-bold text-xl">{firstArticle.fields.title}</h2>
                 <p className="text-sm text-gray-500">
-                  {new Date(articles[0].fields.publishedAt).toLocaleString()}
+                  {new Date(firstArticle.fields.publishedAt).toLocaleString()}
                 </p>
                 <p className="text-gray-600 line-clamp-2">
-                  {articles[0].fields.description1}
+                  {firstArticle.fields.description1}
                 </p>
               </div>
             </Link>
