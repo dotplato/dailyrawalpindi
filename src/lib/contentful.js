@@ -5,7 +5,7 @@ export const client = createClient({
   accessToken: process.env.CONTENTFUL_ACCESS_TOKEN,
 });
 
-// ✅ Fetch all unique categories from articles
+// Fetch all unique categories
 export async function fetchCategories() {
   const res = await client.getEntries({
     content_type: "article",
@@ -13,41 +13,63 @@ export async function fetchCategories() {
     limit: 1000,
   });
 
-  // Extract unique category values
-  const categories = [
-    ...new Set(res.items.map((item) => item.fields.category)),
-  ];
+  const categories = [...new Set(res.items.map(item => item.fields.category))];
 
-  // Capitalize helper
   function capitalize(word) {
     if (!word) return "";
     return word.charAt(0).toUpperCase() + word.slice(1);
   }
 
-  // Map into objects usable for navbar
-  return categories.map((cat) => ({
-    id: cat, // use category name as ID
-    title: capitalize(cat), // ✅ capitalized for display
-    slug: cat.toLowerCase(), // ✅ lowercase for URL
+  return categories.map(cat => ({
+    id: cat,
+    title: capitalize(cat),
+    slug: cat.toLowerCase(),
   }));
 }
 
+// Fetch articles by category (or all if category is "latest")
+// src/lib/contentful.js
+export async function fetchArticlesByCategory(categorySlug) {
+  try {
+    const query = {
+      content_type: "article",
+      order: "-fields.publishedAt",
+    };
 
+    // Apply category filter only if not "latest"
+    if (categorySlug && categorySlug.toLowerCase() !== "latest") {
+      query["fields.category"] = categorySlug;
+    }
 
+    const entries = await client.getEntries(query);
+    let articles = entries.items || [];
 
+    // ✅ Special filter for "latest"
+    if (categorySlug && categorySlug.toLowerCase() === "latest") {
+      const now = new Date();
+      const lastMonth = now.getMonth() - 1;
+      const yearOfLastMonth =
+        lastMonth === -1 ? now.getFullYear() - 1 : now.getFullYear();
+      const correctMonth = lastMonth === -1 ? 11 : lastMonth;
 
-export async function fetchArticlesByCategory(categorySlug, limit = 100) {
-  const res = await client.getEntries({
-    content_type: "article",
-    "fields.category": categorySlug, // ✅ just match the string value
-    order: "-fields.publishedAt",
-    limit,
-  });
+      articles = articles.filter((entry) => {
+        const publishedDate = new Date(entry.fields.publishedAt);
+        return (
+          publishedDate.getMonth() === correctMonth &&
+          publishedDate.getFullYear() === yearOfLastMonth
+        );
+      });
+    }
 
-  return res.items;
+    return articles;
+  } catch (error) {
+    console.error("Error fetching articles by category:", error);
+    return [];
+  }
 }
 
 
+// Other helpers
 export async function fetchLatestArticles(limit = 20) {
   const res = await client.getEntries({
     content_type: "article",
@@ -62,7 +84,7 @@ export async function fetchArticleBySlug(slug) {
     content_type: "article",
     "fields.slug": slug,
     limit: 1,
-    include: 2, // includes linked references like category + rich text
+    include: 2,
   });
   return res.items[0] || null;
 }
@@ -70,6 +92,16 @@ export async function fetchArticleBySlug(slug) {
 export async function fetchAds(limit = 10) {
   const res = await client.getEntries({
     content_type: "ad",
+    limit,
+  });
+  return res.items;
+}
+
+export async function fetchMustReadArticles(limit = 10) {
+  const res = await client.getEntries({
+    content_type: "article",
+    "fields.mustRead": true,
+    order: "-sys.createdAt",
     limit,
   });
   return res.items;

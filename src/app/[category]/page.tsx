@@ -1,3 +1,7 @@
+// Only change: fetchArticlesByCategory already handles "latest" last month filtering
+// So we remove the client-side filter in page.tsx
+// Rest of the code remains the same
+
 import { fetchArticlesByCategory, fetchAds } from "@/lib/contentful";
 import FeaturedNews from "@/components/FeaturedNews";
 import ArticleCard from "@/components/ArticleCard";
@@ -30,13 +34,13 @@ export default async function CategoryPage({
 }) {
   const { category } = await params;
 
-  // ✅ Fetch articles + ads
+  // Fetch articles + ads
   const [entries, ads] = await Promise.all([
     fetchArticlesByCategory(category),
     fetchAds(5),
   ]);
 
-  // ✅ Map ads
+  // Map ads
   const adsMapped: Ad[] = ads.map((ad: any) => {
     const rawUrl = ad.fields.image?.fields?.file?.url;
     const normalizedUrl = rawUrl
@@ -56,7 +60,7 @@ export default async function CategoryPage({
   const adSidebar = adsMapped.find((ad) => ad.placement === "sidebar");
   const adInline = adsMapped.find((ad) => ad.placement === "inline");
 
-  // ✅ Map articles
+  // Map articles
   const articles: Article[] = Array.isArray(entries)
     ? entries.map((entry: any) => {
         const desc = entry.fields.description1
@@ -149,7 +153,7 @@ export default async function CategoryPage({
             </Link>
           )}
 
-          {/* ✅ Inline Ad from CMS */}
+          {/* Inline Ad */}
           {adInline && (
             <div className="my-4 w-full flex justify-center">
               <Link href={adInline.link}>
