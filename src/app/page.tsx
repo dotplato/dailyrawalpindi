@@ -100,9 +100,9 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export default async function Home() {
   const [latest, categories, ads, mustRead] = await Promise.all([
     fetchLatestArticles(20),
-    fetchCategories(), // ✅ all categories dynamically
+    fetchCategories(), 
     fetchAds(5),
-    fetchMustReadArticles(10), // ✅ fetch admin-selected must read
+    fetchMustReadArticles(10), 
   ]);
 
   
