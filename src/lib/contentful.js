@@ -1,3 +1,5 @@
+
+
 import { createClient } from "contentful";
 
 export const client = createClient({
@@ -7,25 +9,31 @@ export const client = createClient({
 
 // Fetch all unique categories
 export async function fetchCategories() {
-  const res = await client.getEntries({
-    content_type: "article",
-    select: "fields.category",
-    limit: 1000,
-  });
+  try {
+    const res = await client.getEntries({
+      content_type: "article",
+      select: "fields.category",
+      limit: 1000,
+    });
 
-  const categories = [...new Set(res.items.map(item => item.fields.category))];
+    const categories = [...new Set(res.items.map((item) => item.fields.category))].filter(Boolean);
 
-  function capitalize(word) {
-    if (!word) return "";
-    return word.charAt(0).toUpperCase() + word.slice(1);
+    function capitalize(word) {
+      if (!word) return "";
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }
+
+    return categories.map((cat) => ({
+      id: String(cat),
+      title: capitalize(cat),
+      slug: String(cat).toLowerCase(),
+    }));
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    return []; // ✅ always return array
   }
-
-  return categories.map(cat => ({
-    id: cat,
-    title: capitalize(cat),
-    slug: cat.toLowerCase(),
-  }));
 }
+
 
 // Fetch articles by category (or all if category is "latest")
 // src/lib/contentful.js
