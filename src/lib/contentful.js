@@ -37,11 +37,12 @@ export async function fetchCategories() {
 
 // Fetch articles by category (or all if category is "latest")
 // src/lib/contentful.js
-export async function fetchArticlesByCategory(categorySlug) {
+export async function fetchArticlesByCategory(categorySlug, limit = 100) {
   try {
     const query = {
       content_type: "article",
       order: "-fields.publishedAt",
+      limit, // ✅ add support for limiting results
     };
 
     // Apply category filter only if not "latest"
