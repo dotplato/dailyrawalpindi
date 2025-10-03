@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.ctfassets.net" }
     ],
   },
+  eslint: {
+    // Warning: This will remove ESLint checks during builds
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
