@@ -18,9 +18,9 @@ export default async function Footer() {
             <div className="min-w-[150px] mx-auto md:mx-0">
               <Link href="/" aria-label="Home">
                 <img
-                  src="/logo.png"
+                  src="/drlogo-1.png"
                   alt="Dailyrawalpindi logo"
-                  className="h-12 w-auto mx-auto md:mx-0"
+                  className="h-32 w-auto mx-auto md:mx-0"
                 />
               </Link>
             </div>

@@ -11,7 +11,7 @@ export default async function Navbar() {
       <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col items-center gap-4">
         {/* Logo (always centered) */}
         <Link href="/" className="inline-flex items-center" aria-label="Home">
-          <img src="/next.svg" alt="Site logo" width={140} height={30} />
+          <img src="/drlogo-2.png" alt="Site logo" width={140} height={30} />
         </Link>
 
         {/* Nav Links */}
